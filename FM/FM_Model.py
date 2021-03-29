@@ -23,10 +23,10 @@ class FM_Model(torch.nn.Module):
         interaction_1 = torch.mm(x, self.V) # torch.mm is matrix multiply
         interaction_1 = torch.pow(interaction_1, 2) # element-wise pow
         interaction_2 = torch.mm(torch.pow(x,2), torch.pow(self.V, 2))
-        interaction_part = 0.5*torch.sum(interaction_1 - interaction_2, 1, keepdim=False)
+        interaction_part = 0.5*torch.sum(interaction_1 - interaction_2)
         output = linear_part + interaction_part
         return output
 
 FM = FM_Model(10,5)
-x = torch.randn(1,10)
+x = torch.randn(2,10)
 output = FM(x)

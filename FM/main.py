@@ -65,32 +65,61 @@ print(x_train.shape)
 y_train = train['rating'].values
 y_test = test['rating'].values
 
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+device = torch.device('cpu')
+batch_size = 64
+x_train = torch.tensor(x_train).float().to(device)
+x_test = torch.tensor(x_test).float().to(device)
+y_train = torch.tensor(y_train).float().to(device)
+y_test = torch.tensor(y_test).float().to(device)
+train_dataset = torch.utils.data.TensorDataset(x_train,y_train)
+train_loader = torch.utils.data.DataLoader(
+        dataset=train_dataset,
+        batch_size=batch_size,
+        shuffle=True,
+        num_workers=0)
+test_dataset = torch.utils.data.TensorDataset(x_test,y_test)
+test_loader = torch.utils.data.DataLoader(
+        dataset=test_dataset,
+        batch_size=batch_size,
+        shuffle=True,
+        num_workers=0)
+
+
 
 samples,n = x_train.shape
 k = 10
-batch_size = 64
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 model = FM_Model(n,k).to(device)
 criterion = torch.nn.MSELoss()
 optimizer =torch.optim.SGD(model.parameters(),lr=0.0001,weight_decay=0.001)
-epochs = 100
+epochs = 10
 
 
 for epoch in range(epochs):
-    x = torch.as_tensor(np.array(x_test),dtype=torch.float,device=device)
-    y = torch.as_tensor(np.array(y_test),dtype=torch.float,device=device)
-    x = x.view(-1,n)
-    y = y.view(-1,1)
-    y_pred = model(x)
-    loss = criterion(y_pred, y)
-    print(epoch,loss.item())
-    optimizer.zero_grad()
-    loss.backward()
-    optimizer.step()
-    
-    
+    model.train()
+    for step,(batch_x,batch_y) in enumerate(train_loader):
+        x = batch_x.view(-1,n)
+        y = batch_y.view(-1,1)
+        y_pred = model(x)
+        loss = criterion(y_pred, y)
+        if step % 100 == 1:
+            print('Epoch:',epoch,'|step:',step)
+            print(epoch,loss.item())
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
 
-#
-#FM = FM_Model(2623,10)
-#x = torch.randn(10,2623)
-#output = FM(x)
+    model.eval()
+    eval_loss = []
+    for step,(batch_x,batch_y) in enumerate(test_loader):
+        x = batch_x.view(-1,n)
+        y = batch_y.view(-1,1)
+        y_pred = model(x)
+        loss = criterion(y_pred, y)
+        eval_loss.append(loss)
+        if step % 100 == 1:
+            print('Epoch:',epoch,'|step:',step)
+            print(epoch,loss.item())
+    print('Eval loss:',torch.mean(torch.tensor(eval_loss)))
+
+
